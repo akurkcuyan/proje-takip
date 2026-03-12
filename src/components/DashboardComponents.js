@@ -2,10 +2,10 @@
 
 // --- Stats Card Component ---
 export const StatsCard = ({ title, value, subtext, badge, color }) => (
-    <div className="glass-card" style={{ padding: '1.5rem' }}>
+    <div className="glass-card stats-card" style={{ padding: '1.5rem' }}>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: '600' }}>{title}</p>
-        <h3 style={{ fontSize: '2.5rem', marginTop: '0.5rem', color: `var(--${color})` }}>{value}</h3>
-        <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 style={{ fontSize: '2.5rem', marginTop: '0.5rem', color: `var(--${color})`, whiteSpace: 'nowrap' }}>{value}</h3>
+        <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             {badge && <span className={`badge badge-${color}`}>{badge}</span>}
             {subtext && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{subtext}</span>}
         </div>
@@ -85,9 +85,9 @@ export const ProjectRow = ({ project, onStatusChange, isAdmin, isSelected, onSel
             )}
             
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                             <h4 style={{ fontSize: '1.1rem' }}>{project.name}</h4>
                             {project.budget && (
                                 <span style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -102,7 +102,7 @@ export const ProjectRow = ({ project, onStatusChange, isAdmin, isSelected, onSel
                         </div>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{project.client} {project.responsible && `• 👤 ${project.responsible}`}</p>
                     </div>
-                    <span className={`badge ${getStatusColor(project.status)}`}>{project.status}</span>
+                    <span className={`badge ${getStatusColor(project.status)}`} style={{ alignSelf: 'flex-start' }}>{project.status}</span>
                 </div>
 
                 {/* Mini Progress Bar */}
@@ -116,9 +116,9 @@ export const ProjectRow = ({ project, onStatusChange, isAdmin, isSelected, onSel
                 </div>
 
                 {/* Previews Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
                     {/* Note Preview */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
                         {lastLog ? (
                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', borderLeft: '3px solid var(--primary)' }}>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
@@ -135,10 +135,10 @@ export const ProjectRow = ({ project, onStatusChange, isAdmin, isSelected, onSel
 
                     {/* Photo Thumbnails */}
                     {project.photos && project.photos.length > 0 && (
-                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', alignSelf: 'flex-end' }}>
                             {project.photos.slice(-3).map((photo, i) => (
                                 <div key={i} style={{
-                                    width: '40px', height: '40px', borderRadius: '0.4rem',
+                                    width: '32px', height: '32px', borderRadius: '0.4rem',
                                     overflow: 'hidden', border: '1px solid var(--border-glass)'
                                 }}>
                                     <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

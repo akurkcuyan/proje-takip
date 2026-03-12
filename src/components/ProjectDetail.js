@@ -79,41 +79,83 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
         setLogText('');
     };
 
-    const handlePhotoUpload = (e) => {
+    const handlePhotoUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            onAddPhoto(project.id, reader.result);
-        };
-        reader.readAsDataURL(file);
+        if (file.size > 50 * 1024 * 1024) { // 50 MB Limit
+            alert("⚠️ Yüklediğiniz fotoğraf 50MB'dan büyük olamaz!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            // Sunucudaki projetakip klasörünün ana dizininde bulunan upload.php'ye dosya yollanır
+            const res = await fetch('upload.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Sunucu hatası');
+            
+            const data = await res.json();
+            if (data.success) {
+                onAddPhoto(project.id, data.url);
+            } else {
+                alert("Yükleme Hatası: " + data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Fotoğraf yüklenemedi. Sunucu veya internet bağlantınızı kontrol edin.");
+        }
     };
 
-    const handleFileUpload = (e) => {
+    const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            // Simulate examining the document by asking the user for the total price found
-            const quotePrice = prompt(`${file.name} belgesi incelendi. Belgedeki GENEL TOPLAM tutarını (USD) giriniz:`, project.budget || "");
-            
-            const updatedQuotes = [...(project.quotes || []), {
-                name: file.name,
-                type: file.type,
-                data: reader.result,
-                date: new Date().toLocaleDateString('tr-TR')
-            }];
+        if (file.size > 50 * 1024 * 1024) { // 50 MB Limit
+            alert("⚠️ Yüklediğiniz dosya/PDF 50MB'dan büyük olamaz!");
+            return;
+        }
 
-            const updateData = { ...project, quotes: updatedQuotes };
-            if (quotePrice !== null && quotePrice !== "") {
-                updateData.budget = quotePrice;
-            }
+        const quotePrice = prompt(`${file.name} belgesi incelendi. Belgedeki GENEL TOPLAM tutarını (USD) giriniz:`, project.budget || "");
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('upload.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Sunucu hatası');
             
-            onUpdateProject(project.id, updateData);
-        };
-        reader.readAsDataURL(file);
+            const data = await res.json();
+            if (data.success) {
+                const updatedQuotes = [...(project.quotes || []), {
+                    name: file.name,
+                    type: file.type,
+                    data: data.url, // URL'yi kaydediyoruz, Base64 değil
+                    date: new Date().toLocaleDateString('tr-TR')
+                }];
+
+                const updateData = { ...project, quotes: updatedQuotes };
+                if (quotePrice !== null && quotePrice !== "") {
+                    updateData.budget = quotePrice;
+                }
+                
+                onUpdateProject(project.id, updateData);
+            } else {
+                alert("Yükleme Hatası: " + data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Teklif dosyası yüklenemedi. PHP sunucu ayarlarını veya internetinizi kontrol edin.");
+        }
     };
 
     const handleStatusUpdateAttempt = (newStatus) => {
@@ -269,14 +311,14 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                 </div>
             )}
 
-            <div className="glass-card" style={{ padding: '2rem' }}>
+            <div className="glass-card container" style={{ padding: '2rem' }}>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="no-print">
-                    <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }} className="no-print mobile-stack">
+                    <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '600', marginBottom: '1rem' }}>
                         <span>←</span> Dashboard'a Dön
                     </button>
 
-                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button 
                             onClick={() => setIsEditingInfo(true)}
                             style={{ 
@@ -466,18 +508,20 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                         ) : (
                             <>
                                 {/* Row 1: Project Name + Identity */}
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '0.6rem' }}>
-                                    <h1 style={{ fontSize: '2.2rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+                                    <h1 style={{ fontSize: '2rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {project.name}
                                     </h1>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{project.client}</p>
-                                    <span style={{ color: 'var(--border-glass)', fontSize: '0.85rem' }}>•</span>
-                                    <p style={{ color: 'var(--primary)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>👤 {project.responsible || 'Belirtilmedi'}</p>
-                                    <span style={{ color: 'var(--border-glass)', fontSize: '0.85rem' }}>•</span>
-                                    <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>📍 Ziyaret:</span>
-                                        <b style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{project.visits || 0}</b>
-                                        <button onClick={incrementVisits} style={{ background: 'none', border: 'none', color: 'var(--success)', cursor: 'pointer', padding: '0 0.2rem', fontSize: '1rem', lineHeight: 1 }}>+</button>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{project.client}</p>
+                                        <span className="mobile-hide" style={{ color: 'var(--border-glass)', fontSize: '0.85rem' }}>•</span>
+                                        <p style={{ color: 'var(--primary)', fontSize: '0.85rem' }}>👤 {project.responsible || 'Belirtilmedi'}</p>
+                                        <span className="mobile-hide" style={{ color: 'var(--border-glass)', fontSize: '0.85rem' }}>•</span>
+                                        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>📍 Ziyaret:</span>
+                                            <b style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{project.visits || 0}</b>
+                                            <button onClick={incrementVisits} style={{ background: 'none', border: 'none', color: 'var(--success)', cursor: 'pointer', padding: '0 0.2rem', fontSize: '1rem', lineHeight: 1 }}>+</button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -588,7 +632,7 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div className="resp-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                     {/* Left: Project Management */}
                     <div>
 
@@ -634,7 +678,7 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
 
                         <div style={{ marginTop: '2rem' }}>
                             <h3 style={{ marginBottom: '1rem' }}>Saha Fotoğrafları</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
                                 {project.photos && project.photos.map((photo, i) => (
                                     <div key={i} style={{ aspectRatio: '1', background: 'var(--bg-surface)', borderRadius: '0.5rem', border: '1px solid var(--border-glass)', overflow: 'hidden', position: 'relative' }}>
                                         <img

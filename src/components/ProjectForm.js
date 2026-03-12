@@ -17,7 +17,8 @@ export default function ProjectForm({ onSubmit, onCancel }) {
     };
 
     return (
-        <div className="glass-card" style={{ padding: '2rem', maxWidth: '500px', margin: '2rem auto' }}>
+        <div style={{ padding: '0 0.5rem' }}>
+            <div className="glass-card" style={{ padding: '2rem', maxWidth: '500px', margin: '1rem auto' }}>
             <h2 style={{ marginBottom: '1.5rem' }}>Yeni Proje Oluştur</h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -56,7 +57,7 @@ export default function ProjectForm({ onSubmit, onCancel }) {
                     />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="resp-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Bütçe (USD)</label>
                         <div style={{ position: 'relative' }}>
@@ -108,6 +109,7 @@ export default function ProjectForm({ onSubmit, onCancel }) {
                     <button type="button" onClick={onCancel} style={{ flex: 1, background: 'none', border: '1px solid var(--border-glass)', color: 'white', borderRadius: '0.75rem', cursor: 'pointer' }}>İptal</button>
                 </div>
             </form>
+        </div>
         </div>
     );
 }

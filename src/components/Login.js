@@ -25,11 +25,11 @@ export default function Login({ onLogin }) {
     };
 
     return (
-        <div style={{
+        <div className="container" style={{
             display: 'flex', justifyContent: 'center', alignItems: 'center',
             minHeight: '80vh'
         }}>
-            <div className="glass-card" style={{ padding: '3rem', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+            <div className="glass-card" style={{ padding: '2rem', width: '100%', maxWidth: '450px', textAlign: 'center' }}>
                 <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: '800' }}>Dinakord Elektronik Proje Takip</h2>
                 <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Devam etmek için giriş yapın.</p>
 

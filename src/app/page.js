@@ -149,12 +149,12 @@ export default function Home() {
     <div style={{ paddingBottom: '5rem' }}>
       {/* Navigation */}
       <nav className="glass-nav no-print" style={{ marginBottom: '2rem' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '800', background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Dinakord Elektronik Proje Takip
+        <div className="container" style={{ padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', background: 'linear-gradient(135deg, #fff 0%, #94a3b8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Dinakord Proje Takip
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ textAlign: 'right' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="mobile-hide" style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>{user.name}</p>
               <p style={{ fontSize: '0.7rem', color: 'var(--primary)' }}>{user.role}</p>
             </div>
@@ -163,7 +163,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <div style={{ padding: '0 2rem' }}>
+      <div className="container">
         {showForm ? (
           <ProjectForm onSubmit={handleCreateProject} onCancel={() => setShowForm(false)} />
         ) : selectedProjectId ? (
@@ -180,20 +180,22 @@ export default function Home() {
           />
         ) : (
           <>
-            <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
+            <header style={{ marginBottom: '2rem' }} className="mobile-stack">
+              <div style={{ flex: 1 }}>
                 <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>Hoş Geldiniz, {user.name}</h1>
                 <p style={{ color: 'var(--text-muted)' }}>İşte bugün projelerinizdeki son durum.</p>
               </div>
-              {isAdmin && (
-                <button onClick={clearData} style={{ fontSize: '0.7rem', color: 'var(--danger)', background: 'none', border: '1px solid var(--danger)', padding: '0.2rem 0.5rem', borderRadius: '0.3rem', cursor: 'pointer' }}>
-                  Sistemi Sıfırla
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }} className="no-print">
+                {isAdmin && (
+                  <button onClick={clearData} style={{ fontSize: '0.7rem', color: 'var(--danger)', background: 'none', border: '1px solid var(--danger)', padding: '0.2rem 0.5rem', borderRadius: '0.3rem', cursor: 'pointer' }}>
+                    Sistemi Sıfırla
+                  </button>
+                )}
+              </div>
             </header>
 
             {canSeeStats && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
+              <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
                 <StatsCard
                   title="AKTİF PROJELER"
                   value={projects.filter(p => p.status !== 'Tamamlandı').length}
@@ -212,7 +214,7 @@ export default function Home() {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+            <div className="resp-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
               <section>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
