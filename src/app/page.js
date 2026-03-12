@@ -5,6 +5,7 @@ import ProjectForm from '@/components/ProjectForm';
 import ProjectDetail from '@/components/ProjectDetail';
 import Login from '@/components/Login';
 import { useLocalStorage } from '@/lib/useLocalStorage';
+import { useFirestoreProjects, useFirestoreActivities } from '@/lib/useFirestore';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -18,12 +19,11 @@ export default function Home() {
 
   const [user, setUser] = useLocalStorage('protracker_user', null);
 
-  const [projects, setProjects] = useLocalStorage('protracker_projects', []);
+  const { projects, loading, addProject, updateProject, deleteProject } = useFirestoreProjects();
+  const { activities, addActivity } = useFirestoreActivities();
 
-  const [activities, setActivities] = useLocalStorage('protracker_activities', []);
-
-  if (!mounted) {
-    return <div style={{ minHeight: '100vh', background: '#0f172a' }} />;
+  if (!mounted || loading) {
+    return <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>Yükleniyor...</div>;
   }
 
   if (!user) {
@@ -37,87 +37,86 @@ export default function Home() {
     setSelectedIds([]);
   };
 
-  const handleCreateProject = (newProject) => {
-    setProjects([newProject, ...projects]);
-    setActivities([{
+  const handleCreateProject = async (newProject) => {
+    const projectWithId = {
+      ...newProject,
+      id: Date.now().toString(),
+    };
+    await addProject(projectWithId);
+    await addActivity({
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       user: user.name,
       action: `Yeni proje oluşturuldu: ${newProject.name}`,
       icon: "📝"
-    }, ...activities]);
+    });
     setShowForm(false);
   };
 
-  const handleStatusUpdate = (id, newStatus) => {
-    setProjects(projects.map(p => {
-      if (p.id === id) {
-        setActivities([{
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          user: user.name,
-          action: `${p.name} durumu güncellendi: ${newStatus}`,
-          icon: "🔄"
-        }, ...activities]);
-
-        return { ...p, status: newStatus };
-      }
-      return p;
-    }));
-  };
-
-  const handleAddLog = (id, log) => {
+  const handleStatusUpdate = async (id, newStatus) => {
     const project = projects.find(p => p.id === id);
-    setProjects(projects.map(p => {
-      if (p.id === id) {
-        return { ...p, logs: [...(p.logs || []), { ...log, user: user.name }] };
-      }
-      return p;
-    }));
-
-    setActivities([{
-      time: log.time,
-      user: user.name,
-      action: `${project.name}: ${log.text.substring(0, 30)}...`,
-      icon: "⚡"
-    }, ...activities]);
-  };
-
-  const handleAddPhoto = (id, photo) => {
-    setProjects(projects.map(p => {
-      if (p.id === id) {
-        return { ...p, photos: [...(p.photos || []), photo] };
-      }
-      return p;
-    }));
-  };
-
-  const handleUpdateProject = (id, updatedData) => {
-    setProjects(projects.map(p => p.id === id ? { ...p, ...updatedData } : p));
-  };
-
-  const handleDeleteProject = (id) => {
-    if (confirm("Bu projeyi silmek istediğinize emin misiniz?")) {
-      const project = projects.find(p => p.id === id);
-      setProjects(projects.filter(p => p.id !== id));
-      setActivities([{
+    if (project) {
+      await updateProject(id, { status: newStatus });
+      await addActivity({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         user: user.name,
-        action: `Proje silindi: ${project.name}`,
-        icon: "🗑️"
-      }, ...activities]);
-      setSelectedProjectId(null);
+        action: `${project.name} durumu güncellendi: ${newStatus}`,
+        icon: "🔄"
+      });
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleAddLog = async (id, log) => {
+    const project = projects.find(p => p.id === id);
+    if (project) {
+      await updateProject(id, { logs: [...(project.logs || []), { ...log, user: user.name }] });
+      await addActivity({
+        time: log.time,
+        user: user.name,
+        action: `${project.name}: ${log.text.substring(0, 30)}...`,
+        icon: "⚡"
+      });
+    }
+  };
+
+  const handleAddPhoto = async (id, photo) => {
+    const project = projects.find(p => p.id === id);
+    if (project) {
+      await updateProject(id, { photos: [...(project.photos || []), photo] });
+    }
+  };
+
+  const handleUpdateProject = async (id, updatedData) => {
+    await updateProject(id, updatedData);
+  };
+
+  const handleDeleteProject = async (id) => {
+    if (confirm("Bu projeyi silmek istediğinize emin misiniz?")) {
+      const project = projects.find(p => p.id === id);
+      if (project) {
+        await deleteProject(id);
+        await addActivity({
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          user: user.name,
+          action: `Proje silindi: ${project.name}`,
+          icon: "🗑️"
+        });
+        setSelectedProjectId(null);
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (confirm(`${selectedIds.length} projeyi silmek istediğinize emin misiniz?`)) {
-      setProjects(projects.filter(p => !selectedIds.includes(p.id)));
-      setActivities([{
+      for (const id of selectedIds) {
+        await deleteProject(id);
+      }
+      await addActivity({
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         user: user.name,
         action: `${selectedIds.length} proje toplu silindi`,
         icon: "🗑️"
-      }, ...activities]);
+      });
       setSelectedIds([]);
     }
   };
@@ -132,8 +131,7 @@ export default function Home() {
     const password = prompt("Sistemi sıfırlamak için yönetici şifresini giriniz:");
     if (password === "Alx131975!") {
       if (confirm("Tüm yerel verileri kalıcı olarak silmek istediğinize emin misiniz?")) {
-        window.localStorage.removeItem('protracker_projects');
-        window.localStorage.removeItem('protracker_activities');
+        window.localStorage.removeItem('protracker_user');
         window.location.reload();
       }
     } else if (password !== null) {
