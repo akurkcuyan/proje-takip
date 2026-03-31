@@ -140,7 +140,8 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                     name: file.name,
                     type: file.type,
                     data: data.url, // URL'yi kaydediyoruz, Base64 değil
-                    date: new Date().toLocaleDateString('tr-TR')
+                    date: new Date().toLocaleDateString('tr-TR'),
+                    uploaderRole: role
                 }];
 
                 const updateData = { ...project, quotes: updatedQuotes };
@@ -185,6 +186,52 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
         if (confirm("Bu teklif dosyasını silmek istediğinize emin misiniz?")) {
             const updatedQuotes = project.quotes.filter((_, i) => i !== index);
             onUpdateProject(project.id, { ...project, quotes: updatedQuotes });
+        }
+    };
+
+    const handleGenericFileUpload = async (e, fieldName) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 50 * 1024 * 1024) { 
+            alert("⚠️ Yüklediğiniz dosya/PDF 50MB'dan büyük olamaz!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('upload.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Sunucu hatası');
+            
+            const data = await res.json();
+            if (data.success) {
+                const updatedFiles = [...(project[fieldName] || []), {
+                    name: file.name,
+                    type: file.type,
+                    data: data.url, 
+                    date: new Date().toLocaleDateString('tr-TR')
+                }];
+                
+                onUpdateProject(project.id, { ...project, [fieldName]: updatedFiles });
+            } else {
+                alert("Yükleme Hatası: " + data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Dosya yüklenemedi. PHP sunucu ayarlarını veya internetinizi kontrol edin.");
+        }
+    };
+
+    const handleGenericFileDelete = (index, fieldName, confirmMsg) => {
+        if (confirm(confirmMsg)) {
+            const updatedFiles = project[fieldName].filter((_, i) => i !== index);
+            onUpdateProject(project.id, { ...project, [fieldName]: updatedFiles });
         }
     };
 
@@ -709,16 +756,118 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                             </div>
                         </div>
 
+                        {(() => {
+                            const canViewQuote = (file) => {
+                                const isMontajQuote = file.uploaderRole === 'Saha Ekibi';
+                                if (isAdmin || role === 'Yönetici') return true; 
+                                if (role === 'Saha Ekibi') return isMontajQuote;
+                                if (role === 'Satış Ekibi') return !isMontajQuote;
+                                return false;
+                            };
+
+                            const visibleQuotes = (project.quotes || []).map((file, i) => ({ ...file, originalIndex: i })).filter(canViewQuote);
+
+                            return (
+                                <div style={{ marginTop: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <h3>Fiyat Teklifleri</h3>
+                                        <label className="no-print" style={{ cursor: 'pointer', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: '600' }}>
+                                            + Dosya Ekle
+                                            <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
+                                        </label>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {visibleQuotes.length > 0 ? visibleQuotes.map((file) => (
+                                            <div key={file.originalIndex} className="glass-card" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <span style={{ fontSize: '1.2rem' }}>{file.name.endsWith('.pdf') ? '📄' : '📊'}</span>
+                                                    <div>
+                                                        <p style={{ fontSize: '0.85rem', fontWeight: '500' }}>{file.name}</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{file.date} {file.uploaderRole === 'Saha Ekibi' && <span style={{color: '#fbbf24', marginLeft: '4px'}}>(Montaj Ekibi)</span>}</p>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    {file.name.toLowerCase().endsWith('.pdf') && (
+                                                        <button 
+                                                            onClick={() => setSelectedPdf(file)}
+                                                            style={{ color: 'var(--primary)', background: 'none', border: 'none', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}
+                                                        >
+                                                            Görüntüle
+                                                        </button>
+                                                    )}
+                                                    <a href={file.data} download={file.name} style={{ color: 'var(--primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: '600' }}>İndir</a>
+                                                    {(isAdmin || role === 'Yönetici') && (
+                                                        <button 
+                                                            onClick={() => handleDeleteQuote(file.originalIndex)}
+                                                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' }}
+                                                            title="Dosyayı Sil"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem', border: '1px dashed var(--border-glass)', borderRadius: '0.5rem' }}>Görebileceğiniz bir teklif bulunmamaktadır.</p>}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Proje Dosyaları */}
                         <div style={{ marginTop: '2rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3>Fiyat Teklifleri</h3>
+                                <h3>Proje Dosyaları</h3>
                                 <label className="no-print" style={{ cursor: 'pointer', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: '600' }}>
                                     + Dosya Ekle
-                                    <input type="file" accept=".pdf,.xls,.xlsx" onChange={handleFileUpload} style={{ display: 'none' }} />
+                                    <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.dwg,.zip,.rar" onChange={(e) => handleGenericFileUpload(e, 'projectFiles')} style={{ display: 'none' }} />
                                 </label>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {project.quotes && project.quotes.length > 0 ? project.quotes.map((file, i) => (
+                                {project.projectFiles && project.projectFiles.length > 0 ? project.projectFiles.map((file, i) => (
+                                    <div key={i} className="glass-card" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>{file.name.endsWith('.pdf') ? '📄' : file.name.endsWith('.zip') || file.name.endsWith('.rar') ? '🗜️' : '📁'}</span>
+                                            <div>
+                                                <p style={{ fontSize: '0.85rem', fontWeight: '500' }}>{file.name}</p>
+                                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{file.date}</p>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            {file.name.toLowerCase().endsWith('.pdf') && (
+                                                <button 
+                                                    onClick={() => setSelectedPdf(file)}
+                                                    style={{ color: 'var(--primary)', background: 'none', border: 'none', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}
+                                                >
+                                                    Görüntüle
+                                                </button>
+                                            )}
+                                            <a href={file.data} download={file.name} style={{ color: 'var(--primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: '600' }}>İndir</a>
+                                            {isAdmin && (
+                                                <button 
+                                                    onClick={() => handleGenericFileDelete(i, 'projectFiles', 'Bu proje dosyasını silmek istediğinize emin misiniz?')}
+                                                    style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' }}
+                                                    title="Dosyayı Sil"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem', border: '1px dashed var(--border-glass)', borderRadius: '0.5rem' }}>Henüz proje dosyası eklenmedi.</p>}
+                            </div>
+                        </div>
+
+                        {/* Malzeme Listeleri */}
+                        <div style={{ marginTop: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h3>Malzeme Listeleri</h3>
+                                <label className="no-print" style={{ cursor: 'pointer', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: '600' }}>
+                                    + Liste Ekle
+                                    <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => handleGenericFileUpload(e, 'materialLists')} style={{ display: 'none' }} />
+                                </label>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {project.materialLists && project.materialLists.length > 0 ? project.materialLists.map((file, i) => (
                                     <div key={i} className="glass-card" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <span style={{ fontSize: '1.2rem' }}>{file.name.endsWith('.pdf') ? '📄' : '📊'}</span>
@@ -739,7 +888,7 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                                             <a href={file.data} download={file.name} style={{ color: 'var(--primary)', fontSize: '0.8rem', textDecoration: 'none', fontWeight: '600' }}>İndir</a>
                                             {isAdmin && (
                                                 <button 
-                                                    onClick={() => handleDeleteQuote(i)}
+                                                    onClick={() => handleGenericFileDelete(i, 'materialLists', 'Bu malzeme listesini silmek istediğinize emin misiniz?')}
                                                     style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem' }}
                                                     title="Dosyayı Sil"
                                                 >
@@ -748,7 +897,7 @@ export default function ProjectDetail({ project, onBack, onAddLog, onAddPhoto, o
                                             )}
                                         </div>
                                     </div>
-                                )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem', border: '1px dashed var(--border-glass)', borderRadius: '0.5rem' }}>Henüz teklif eklenmedi.</p>}
+                                )) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem', border: '1px dashed var(--border-glass)', borderRadius: '0.5rem' }}>Henüz malzeme listesi eklenmedi.</p>}
                             </div>
                         </div>
                     </div>
